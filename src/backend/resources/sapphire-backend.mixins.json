@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.maximumpower55.sapphire.backend.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "input.InputConstants_TypeMixin",
+    "input.InputConstantsMixin",
+    "input.KeyboardHandlerMixin",
+    "input.MouseHandlerMixin",
+    "input.RenderSystemMixin",
+    "input.TextInputManagerMixin",
+    "window.GlBackendMixin",
+    "window.GlDeviceMixin",
+    "window.GlSurfaceMixin",
+    "window.MinecraftMixin",
+    "window.VulkanBackendMixin",
+    "window.VulkanGpuSurfaceMixin",
+    "window.VulkanInstanceMixin",
+    "window.VulkanPhysicalDeviceMixin",
+    "window.WindowMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

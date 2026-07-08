@@ -5,6 +5,13 @@ build/
 out/
 classes/
 
+# rust
+
+native/native.h
+native/target
+native/Cargo.lock
+src/nativeextract
+
 # eclipse
 
 *.launch

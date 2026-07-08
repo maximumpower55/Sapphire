@@ -1,0 +1,4 @@
+classTweaker  v1  official
+
+accessible  class  com/mojang/blaze3d/opengl/GlDevice
+inject-interface  com/mojang/blaze3d/platform/Window  me/maximumpower55/sapphire/backend/extension/WindowExt

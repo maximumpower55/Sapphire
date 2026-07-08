@@ -1,29 +1,27 @@
 {
   "schemaVersion": 1,
-  "id": "modid",
+  "id": "sapphire",
   "version": "${version}",
-  "name": "Example Mod",
+  "name": "Sapphire",
   "description": "This is an example description! Tell everyone what your mod is about!",
   "authors": [
-    "Tropheus Jay"
+    "maximumpower55"
   ],
   "contact": {
-    "sources": "https://github.com/TropheusJ/fabric-example-mod"
+    "sources": "https://github.com/maximumpower55/Sapphire"
   },
   "license": "MIT",
-  "icon": "assets/modid/icon.png",
-  "environment": "*",
+  "icon": "assets/sapphire/icon.png",
+  "environment": "client",
   "entrypoints": {
-    "main": [
-      "io.github.tropheusj.modid.ExampleMod"
-    ]
   },
+  "accessWidener": "sapphire.classtweaker",
   "mixins": [
-    "modid.mixins.json"
+    "sapphire-backend.mixins.json",
+    "sapphire.mixins.json"
   ],
   "depends": {
     "minecraft": "=${minecraft_version}",
-    "fabricloader": ">=${loader_version}",
-    "fabric-api": ">=${fapi_version}"
+    "fabricloader": ">=${loader_version}"
   }
 }

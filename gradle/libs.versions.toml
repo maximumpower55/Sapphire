@@ -1,30 +1,21 @@
 [versions]
-loom = "1.11.+"
+loom = "1.15.+"
 
-minecraft = "1.21.10"
-
+minecraft = "26.3-snapshot-2"
 # https://fabricmc.net/develop
-loader = "0.17.2"
-fapi = "0.134.1+1.21.10"
+loader = "0.19.3"
 
-# dev env mods
-# https://modrinth.com/mod/sodium/versions?l=fabric
-sodium = "mc1.21.9-0.7.0-fabric"
-# https://modrinth.com/mod/modmenu/versions
-mod_menu = "16.0.0-rc.1"
+lwjgl = "3.4.1"
 
 [libraries]
 # the minecraft dependency for the fabric project only.
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
 loader = { module = "net.fabricmc:fabric-loader", version.ref = "loader" }
-fapi = { module = "net.fabricmc.fabric-api:fabric-api", version.ref = "fapi" }
-sodium = { module = "maven.modrinth:sodium", version.ref = "sodium" }
-mod_menu = { module = "maven.modrinth:modmenu", version.ref = "mod_menu" }
+
+lwjgl-sdl = { module = "org.lwjgl:lwjgl-sdl", version.ref = "lwjgl" }
 
 [bundles]
-fabric = [ "loader", "fapi" ]
-dev = [ "sodium", "mod_menu" ]
+fabric = [ "loader" ]
 
 [plugins]
-loom = { id = "fabric-loom", version.ref = "loom" }
-maven = { id = "maven-publish" }
+loom = { id = "net.fabricmc.fabric-loom", version.ref = "loom" }
