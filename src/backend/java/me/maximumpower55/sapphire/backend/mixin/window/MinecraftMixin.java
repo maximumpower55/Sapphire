@@ -1,31 +1,34 @@
 package me.maximumpower55.sapphire.backend.mixin.window;
 
-import net.minecraft.client.Minecraft;
+import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowSizeInPixels;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowMaximumSize;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowMinimumSize;
+import static org.lwjgl.sdl.SDLVideo.SDL_ShowWindow;
 
-import static org.lwjgl.sdl.SDLVideo.*;
+import java.nio.IntBuffer;
 
 import org.lwjgl.system.MemoryStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import java.nio.IntBuffer;
+import net.minecraft.client.Minecraft;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
 	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSetWindowSizeLimits(JIIII)V"))
-	private void h(long window, int minwidth, int minheight, int maxwidth, int maxheight) {
+	private static void sdlSetWindowSizeLimits(long window, int minwidth, int minheight, int maxwidth, int maxheight) {
 		SDL_SetWindowMinimumSize(window, minwidth, minheight);
 		SDL_SetWindowMaximumSize(window, maxwidth, maxheight);
 	}
 
 	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwShowWindow(J)V"))
-	private void sdlShowWindow(long window) {
+	private static void sdlShowWindow(long window) {
 		SDL_ShowWindow(window);
 	}
 
 	@Redirect(method = "renderFrame", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwGetFramebufferSize(J[I[I)V"))
-	private void sdlGetWindowSizeInPixels(long window, int[] width, int[] height) {
+	private static void sdlGetWindowSizeInPixels(long window, int[] width, int[] height) {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			IntBuffer w = stack.mallocInt(1);
 			IntBuffer h = stack.mallocInt(1);

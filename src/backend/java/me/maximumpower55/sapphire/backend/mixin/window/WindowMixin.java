@@ -1,19 +1,35 @@
 package me.maximumpower55.sapphire.backend.mixin.window;
 
-import com.mojang.blaze3d.opengl.GlBackend;
-import com.mojang.blaze3d.platform.IconSet;
-import com.mojang.blaze3d.platform.Window;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_CLOSE_REQUESTED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_FOCUS_GAINED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_FOCUS_LOST;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOUSE_ENTER;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOUSE_LEAVE;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOVED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_RESIZED;
+import static org.lwjgl.sdl.SDLProperties.SDL_CreateProperties;
+import static org.lwjgl.sdl.SDLProperties.SDL_SetBooleanProperty;
+import static org.lwjgl.sdl.SDLProperties.SDL_SetNumberProperty;
+import static org.lwjgl.sdl.SDLProperties.SDL_SetStringProperty;
+import static org.lwjgl.sdl.SDLVideo.SDL_CreateWindowWithProperties;
+import static org.lwjgl.sdl.SDLVideo.SDL_DestroyWindow;
+import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowSizeInPixels;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_TITLE_STRING;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_Y_NUMBER;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowTitle;
+import static org.lwjgl.sdl.SDLVideo.SDL_WINDOWPOS_CENTERED_DISPLAY;
 
-import com.mojang.blaze3d.systems.BackendCreationException;
-import com.mojang.blaze3d.systems.GpuBackend;
-
-import com.mojang.blaze3d.systems.RenderSystem;
-
-import com.mojang.blaze3d.vulkan.VulkanBackend;
-
-import me.maximumpower55.sapphire.backend.SapphireEventHandler;
-import me.maximumpower55.sapphire.backend.extension.WindowExt;
-import net.minecraft.server.packs.PackResources;
+import java.io.IOException;
+import java.nio.IntBuffer;
+import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFWCursorEnterCallback;
@@ -28,24 +44,28 @@ import org.lwjgl.glfw.GLFWWindowPosCallback;
 import org.lwjgl.glfw.GLFWWindowPosCallbackI;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.glfw.GLFWWindowSizeCallbackI;
-import static org.lwjgl.sdl.SDLVideo.*;
-import static org.lwjgl.sdl.SDLEvents.*;
-
 import org.lwjgl.sdl.SDLError;
-import static org.lwjgl.sdl.SDLProperties.*;
-
 import org.lwjgl.sdl.SDL_WindowEvent;
 import org.lwjgl.system.MemoryStack;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import java.io.IOException;
-import java.nio.IntBuffer;
-import java.util.Objects;
+import com.mojang.blaze3d.opengl.GlBackend;
+import com.mojang.blaze3d.platform.IconSet;
+import com.mojang.blaze3d.platform.Window;
+import com.mojang.blaze3d.systems.BackendCreationException;
+import com.mojang.blaze3d.systems.GpuBackend;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vulkan.VulkanBackend;
+
+import me.maximumpower55.sapphire.backend.SapphireEventHandler;
+import me.maximumpower55.sapphire.backend.extension.WindowExt;
+import net.minecraft.server.packs.PackResources;
 
 // TODO: Reimplement monitor and mode management
 @Mixin(Window.class)
@@ -74,6 +94,9 @@ public abstract class WindowMixin implements WindowExt {
 
 	@Shadow
 	protected abstract void onEnter(long handle, boolean entered);
+
+	@Unique
+	private boolean closeRequested;
 
 	@Redirect(
 			method = "createWindow",
@@ -136,6 +159,9 @@ public abstract class WindowMixin implements WindowExt {
 			}
 			case SDL_EVENT_WINDOW_MOUSE_LEAVE -> {
 				this.onEnter(this.handle, false);
+			}
+			case SDL_EVENT_WINDOW_CLOSE_REQUESTED -> {
+				this.closeRequested = true;
 			}
 		}
 	}
@@ -214,7 +240,7 @@ public abstract class WindowMixin implements WindowExt {
 
 	@Overwrite
 	public boolean shouldClose() {
-		return false;
+		return this.closeRequested;
 	}
 
 	@Overwrite

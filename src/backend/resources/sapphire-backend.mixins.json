@@ -4,11 +4,12 @@
   "package": "me.maximumpower55.sapphire.backend.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "MinecraftMixin",
+    "RenderSystemMixin",
     "input.InputConstants_TypeMixin",
     "input.InputConstantsMixin",
     "input.KeyboardHandlerMixin",
     "input.MouseHandlerMixin",
-    "input.RenderSystemMixin",
     "input.TextInputManagerMixin",
     "window.GlBackendMixin",
     "window.GlDeviceMixin",
