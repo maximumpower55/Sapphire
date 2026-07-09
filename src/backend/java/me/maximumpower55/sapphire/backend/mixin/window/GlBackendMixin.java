@@ -1,10 +1,17 @@
 package me.maximumpower55.sapphire.backend.mixin.window;
 
-import com.mojang.blaze3d.opengl.GlBackend;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_CONTEXT_FLAGS;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_CONTEXT_MAJOR_VERSION;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_CONTEXT_MINOR_VERSION;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_CONTEXT_PROFILE_CORE;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_CONTEXT_PROFILE_MASK;
+import static org.lwjgl.sdl.SDLVideo.SDL_GL_SetAttribute;
 
-import static org.lwjgl.sdl.SDLVideo.*;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
+
+import com.mojang.renderpearl.backend.opengl.GlBackend;
 
 @Mixin(GlBackend.class)
 public class GlBackendMixin {

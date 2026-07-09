@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import com.mojang.blaze3d.vulkan.VulkanInstance;
+import com.mojang.renderpearl.backend.vulkan.VulkanInstance;
 
 @Mixin(VulkanInstance.class)
 public class VulkanInstanceMixin {

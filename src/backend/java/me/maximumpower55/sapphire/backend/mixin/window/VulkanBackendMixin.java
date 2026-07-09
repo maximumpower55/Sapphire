@@ -1,11 +1,11 @@
 package me.maximumpower55.sapphire.backend.mixin.window;
 
-import com.mojang.blaze3d.vulkan.VulkanBackend;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+
+import com.mojang.renderpearl.backend.vulkan.VulkanBackend;
 
 @Mixin(VulkanBackend.class)
 public class VulkanBackendMixin {

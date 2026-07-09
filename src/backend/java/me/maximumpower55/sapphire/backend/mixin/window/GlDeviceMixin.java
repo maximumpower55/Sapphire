@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import com.mojang.blaze3d.opengl.GlDevice;
+import com.mojang.renderpearl.backend.opengl.GlDevice;
 
 @Mixin(GlDevice.class)
 public class GlDeviceMixin {

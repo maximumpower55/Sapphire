@@ -55,13 +55,13 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import com.mojang.blaze3d.opengl.GlBackend;
 import com.mojang.blaze3d.platform.IconSet;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.BackendCreationException;
-import com.mojang.blaze3d.systems.GpuBackend;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vulkan.VulkanBackend;
+import com.mojang.renderpearl.api.device.BackendCreationException;
+import com.mojang.renderpearl.api.device.GpuBackend;
+import com.mojang.renderpearl.backend.opengl.GlBackend;
+import com.mojang.renderpearl.backend.vulkan.VulkanBackend;
 
 import me.maximumpower55.sapphire.backend.SapphireEventHandler;
 import me.maximumpower55.sapphire.backend.extension.WindowExt;
@@ -96,13 +96,15 @@ public abstract class WindowMixin implements WindowExt {
 	protected abstract void onEnter(long handle, boolean entered);
 
 	@Unique
+	private int id;
+	@Unique
 	private boolean closeRequested;
 
 	@Redirect(
 			method = "createWindow",
 			at = @At(
 					value = "INVOKE",
-					target = "Lcom/mojang/blaze3d/platform/Window;createGlfwWindow(IILjava/lang/String;JLcom/mojang/blaze3d/systems/GpuBackend;)J"
+					target = "Lcom/mojang/blaze3d/platform/Window;createGlfwWindow(IILjava/lang/String;JLcom/mojang/renderpearl/api/device/GpuBackend;)J"
 			)
 	)
 	private long sdlCreateWindow(int width, int height, String title, long monitor, GpuBackend backend) throws BackendCreationException {
@@ -137,7 +139,7 @@ public abstract class WindowMixin implements WindowExt {
 	}
 
 	@Override
-	public void sapphire$handleEvent(SDL_WindowEvent event) {
+	public void sapphire$onEvent(SDL_WindowEvent event) {
 		switch (event.type()) {
 			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -> {
 				this.onFramebufferResize(this.handle, event.data1(), event.data2());
