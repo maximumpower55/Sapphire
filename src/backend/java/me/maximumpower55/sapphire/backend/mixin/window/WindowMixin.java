@@ -145,6 +145,7 @@ public abstract class WindowMixin implements WindowExt {
 	@Shadow
 	@Final
 	private boolean exclusiveFullscreen;
+
 	@Unique
 	private int id;
 	@Unique
@@ -210,30 +211,14 @@ public abstract class WindowMixin implements WindowExt {
 	@Override
 	public void sapphire$onEvent(SDL_WindowEvent event) {
 		switch (event.type()) {
-			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -> {
-				this.onFramebufferResize(this.handle, event.data1(), event.data2());
-			}
-			case SDL_EVENT_WINDOW_MOVED -> {
-				this.onMove(this.handle, event.data1(), event.data2());
-			}
-			case SDL_EVENT_WINDOW_RESIZED -> {
-				this.onResize(this.handle, event.data1(), event.data2());
-			}
-			case SDL_EVENT_WINDOW_FOCUS_GAINED -> {
-				this.onFocus(this.handle, true);
-			}
-			case SDL_EVENT_WINDOW_FOCUS_LOST -> {
-				this.onFocus(this.handle, false);
-			}
-			case SDL_EVENT_WINDOW_MOUSE_ENTER -> {
-				this.onEnter(this.handle, true);
-			}
-			case SDL_EVENT_WINDOW_MOUSE_LEAVE -> {
-				this.onEnter(this.handle, false);
-			}
-			case SDL_EVENT_WINDOW_CLOSE_REQUESTED -> {
-				this.closeRequested = true;
-			}
+			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED -> this.onFramebufferResize(this.handle, event.data1(), event.data2());
+			case SDL_EVENT_WINDOW_MOVED -> this.onMove(this.handle, event.data1(), event.data2());
+			case SDL_EVENT_WINDOW_RESIZED -> this.onResize(this.handle, event.data1(), event.data2());
+			case SDL_EVENT_WINDOW_FOCUS_GAINED -> this.onFocus(this.handle, true);
+			case SDL_EVENT_WINDOW_FOCUS_LOST -> this.onFocus(this.handle, false);
+			case SDL_EVENT_WINDOW_MOUSE_ENTER -> this.onEnter(this.handle, true);
+			case SDL_EVENT_WINDOW_MOUSE_LEAVE -> this.onEnter(this.handle, false);
+			case SDL_EVENT_WINDOW_CLOSE_REQUESTED -> this.closeRequested = true;
 		}
 	}
 
@@ -350,6 +335,7 @@ public abstract class WindowMixin implements WindowExt {
 
 				if (this.exclusiveFullscreen) {
 					// Manually invoke this because lwjgl is just broken
+					//noinspection resource
 					JNI.invokePPZ(this.handle, mode.sapphire$displayMode().address(), SDLVideo.Functions.SetWindowFullscreenMode);
 				}
 				SDL_SetWindowFullscreen(this.handle, true);
