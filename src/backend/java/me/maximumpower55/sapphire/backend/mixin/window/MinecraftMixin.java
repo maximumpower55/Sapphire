@@ -16,6 +16,14 @@ import net.minecraft.client.Minecraft;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
+	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwDefaultWindowHints()V"))
+	private static void noopDefaultHints() {
+	}
+
+	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwWindowHint(II)V"))
+	private static void noopHint(int hint, int value) {
+	}
+
 	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSetWindowSizeLimits(JIIII)V"))
 	private static void sdlSetWindowSizeLimits(long window, int minwidth, int minheight, int maxwidth, int maxheight) {
 		SDL_SetWindowMinimumSize(window, minwidth, minheight);
