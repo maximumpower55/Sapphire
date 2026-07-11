@@ -1,4 +1,4 @@
-package me.maximumpower55.sapphire.backend.mixin.window;
+package me.maximumpower55.sapphire.backend.mixin.vulkan;
 
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.PointerBuffer;

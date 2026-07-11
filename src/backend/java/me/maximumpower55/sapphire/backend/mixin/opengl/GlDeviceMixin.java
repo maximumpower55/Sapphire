@@ -1,4 +1,4 @@
-package me.maximumpower55.sapphire.backend.mixin.window;
+package me.maximumpower55.sapphire.backend.mixin.opengl;
 
 import static org.lwjgl.sdl.SDLVideo.SDL_GL_CreateContext;
 import static org.lwjgl.sdl.SDLVideo.SDL_GL_MakeCurrent;

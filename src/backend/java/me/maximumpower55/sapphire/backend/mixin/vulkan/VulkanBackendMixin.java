@@ -1,4 +1,4 @@
-package me.maximumpower55.sapphire.backend.mixin.window;
+package me.maximumpower55.sapphire.backend.mixin.vulkan;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -20,7 +20,7 @@ public class VulkanBackendMixin {
 	@Redirect(
 			method = {
 					"checkBackendAvailable",
-					"createDevice(JLcom/mojang/blaze3d/shaders/GpuDebugOptions;)Lcom/mojang/blaze3d/systems/GpuDevice;"
+					"createDevice(JLcom/mojang/renderpearl/api/device/GpuDebugOptions;)Lcom/mojang/renderpearl/api/device/GpuDevice;"
 			},
 			at = @At(
 					value = "INVOKE",

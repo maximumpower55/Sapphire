@@ -1,27 +1,37 @@
 package me.maximumpower55.sapphire.backend;
 
-import it.unimi.dsi.fastutil.Pair;
-import it.unimi.dsi.fastutil.ints.Int2IntFunction;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.util.function.Function;
 
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.sdl.SDLInit;
+import org.lwjgl.sdl.SDLKeycode;
+import org.lwjgl.sdl.SDLMouse;
+import org.lwjgl.sdl.SDLVideo;
+import org.lwjgl.sdl.SDLVulkan;
+
+import com.mojang.blaze3d.platform.NativeLibrariesBootstrap;
+
+import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMaps;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
-import it.unimi.dsi.fastutil.ints.Int2IntRBTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.sdl.SDL;
-import org.lwjgl.sdl.SDLKeyboard;
-import org.lwjgl.sdl.SDLKeycode;
-import org.lwjgl.sdl.SDLMouse;
-import org.lwjgl.sdl.SDLScancode;
-
-import java.lang.reflect.Field;
-import java.util.Set;
-import java.util.function.Function;
-
 public final class SDLHelper {
+	private SDLHelper() {
+	}
+
+	public static void init() {
+		SDLInit.SDL_Init(SDLInit.SDL_INIT_EVENTS | SDLInit.SDL_INIT_VIDEO);
+
+		// Note: GLFW implicitly loads libraries, it is never supplied with libraries by the game
+		SDLVideo.SDL_GL_LoadLibrary((ByteBuffer) null);
+		if (NativeLibrariesBootstrap.isVulkanLoaderAvailable()) {
+			SDLVulkan.SDL_Vulkan_LoadLibrary((ByteBuffer) null);
+		}
+	}
+
 	private static final Pair<Int2IntMap, Int2IntMap> KEY_MAPPING = createGlfwMapping(SDLKeycode.class, "SDLK_", "GLFW_KEY_", name -> name
 			.replace("LEFT_", "L")
 			.replace("RIGHT_", "R")
@@ -60,9 +70,6 @@ public final class SDLHelper {
 		}
 
 		return Pair.of(Int2IntMaps.unmodifiable(sdlToGlfwMap), Int2IntMaps.unmodifiable(glfwToSdlMap));
-	}
-
-	private SDLHelper() {
 	}
 
 	public static int mapModifiersToGlfw(short modifiers) {
