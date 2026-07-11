@@ -14,6 +14,9 @@ import static org.lwjgl.sdl.SDLProperties.SDL_SetNumberProperty;
 import static org.lwjgl.sdl.SDLProperties.SDL_SetStringProperty;
 import static org.lwjgl.sdl.SDLVideo.SDL_CreateWindowWithProperties;
 import static org.lwjgl.sdl.SDLVideo.SDL_DestroyWindow;
+import static org.lwjgl.sdl.SDLVideo.SDL_GetPrimaryDisplay;
+import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowFlags;
+import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowPosition;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowSizeInPixels;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN;
@@ -23,13 +26,20 @@ import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_TITLE_STRING;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER;
+import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_X_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_Y_NUMBER;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowFullscreen;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowPosition;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowSize;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowTitle;
 import static org.lwjgl.sdl.SDLVideo.SDL_WINDOWPOS_CENTERED_DISPLAY;
+import static org.lwjgl.sdl.SDLVideo.SDL_WINDOW_FULLSCREEN;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFWCursorEnterCallback;
@@ -45,8 +55,11 @@ import org.lwjgl.glfw.GLFWWindowPosCallbackI;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.glfw.GLFWWindowSizeCallbackI;
 import org.lwjgl.sdl.SDLError;
+import org.lwjgl.sdl.SDLVideo;
 import org.lwjgl.sdl.SDL_WindowEvent;
+import org.lwjgl.system.JNI;
 import org.lwjgl.system.MemoryStack;
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -56,6 +69,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import com.mojang.blaze3d.platform.IconSet;
+import com.mojang.blaze3d.platform.Monitor;
+import com.mojang.blaze3d.platform.MonitorManager;
+import com.mojang.blaze3d.platform.VideoMode;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.device.BackendCreationException;
@@ -67,7 +83,6 @@ import me.maximumpower55.sapphire.backend.SapphireEventHandler;
 import me.maximumpower55.sapphire.backend.extension.WindowExt;
 import net.minecraft.server.packs.PackResources;
 
-// TODO: Reimplement monitor and mode management
 @Mixin(Window.class)
 public abstract class WindowMixin implements WindowExt {
 	@Shadow
@@ -95,10 +110,62 @@ public abstract class WindowMixin implements WindowExt {
 	@Shadow
 	protected abstract void onEnter(long handle, boolean entered);
 
+	@Shadow
+	private boolean fullscreen;
+	@Shadow
+	@Final
+	private MonitorManager monitorManager;
+	@Shadow
+	@Final
+	private static Logger LOGGER;
+	@Shadow
+	private int x;
+	@Shadow
+	private int y;
+	@Shadow
+	private int width;
+	@Shadow
+	private int height;
+
+	@Shadow
+	private static int allowedWindowMinSize(int size) {
+		throw new UnsupportedOperationException("Implemented via mixin");
+	}
+
+	@Shadow
+	private int windowedX;
+	@Shadow
+	private int windowedY;
+	@Shadow
+	private int windowedWidth;
+	@Shadow
+	private int windowedHeight;
+	@Shadow
+	private Optional<VideoMode> preferredFullscreenVideoMode;
+	@Shadow
+	@Final
+	private boolean exclusiveFullscreen;
 	@Unique
 	private int id;
 	@Unique
 	private boolean closeRequested;
+
+	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwGetPrimaryMonitor()J"))
+	private static long sdlGetPrimaryDisplay() {
+		return SDL_GetPrimaryDisplay();
+	}
+
+	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwGetWindowPos(J[I[I)V"))
+	private static void sdlGetWindowPosition(long window, int[] xpos, int[] ypos) {
+		try (MemoryStack stack = MemoryStack.stackPush()) {
+			IntBuffer x = stack.mallocInt(1);
+			IntBuffer y = stack.mallocInt(1);
+			if (SDL_GetWindowPosition(window, x, y)) {
+				xpos[0] = x.get();
+				ypos[0] = y.get();
+			}
+		}
+	}
 
 	@Redirect(
 			method = "createWindow",
@@ -110,6 +177,7 @@ public abstract class WindowMixin implements WindowExt {
 	private long sdlCreateWindow(int width, int height, String title, long monitor, GpuBackend backend) throws BackendCreationException {
 		backend.setWindowHints();
 
+		int displayId = (int) monitor;
 		int properties = SDL_CreateProperties();
 
 		SDL_SetBooleanProperty(
@@ -126,7 +194,8 @@ public abstract class WindowMixin implements WindowExt {
 		SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, width);
 		SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
 		SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, title);
-		SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(0));
+		SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(displayId));
+		SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED_DISPLAY(displayId));
 		SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
 
 		long window = SDL_CreateWindowWithProperties(properties);
@@ -176,7 +245,7 @@ public abstract class WindowMixin implements WindowExt {
 			)
 	)
 	@Nullable
-	private static GLFWFramebufferSizeCallback sapphireSetFramebufferSizeCallback(long $, GLFWFramebufferSizeCallbackI cbfun) {
+	private static GLFWFramebufferSizeCallback noopSetFramebufferSizeCallback(long $, GLFWFramebufferSizeCallbackI cbfun) {
 		return null;
 	}
 
@@ -188,7 +257,7 @@ public abstract class WindowMixin implements WindowExt {
 			)
 	)
 	@Nullable
-	private static GLFWWindowPosCallback sapphireSetWindowPosCallback(long $, GLFWWindowPosCallbackI cbfun) {
+	private static GLFWWindowPosCallback noopSetWindowPosCallback(long $, GLFWWindowPosCallbackI cbfun) {
 		return null;
 	}
 
@@ -200,7 +269,7 @@ public abstract class WindowMixin implements WindowExt {
 			)
 	)
 	@Nullable
-	private static GLFWWindowSizeCallback sapphireSetWindowSizeCallback(long $, GLFWWindowSizeCallbackI cbfun) {
+	private static GLFWWindowSizeCallback noopSetWindowSizeCallback(long $, GLFWWindowSizeCallbackI cbfun) {
 		return null;
 	}
 
@@ -212,7 +281,7 @@ public abstract class WindowMixin implements WindowExt {
 			)
 	)
 	@Nullable
-	private static GLFWWindowFocusCallback sapphireSetWindowFocusCallback(long $, GLFWWindowFocusCallbackI cbfun) {
+	private static GLFWWindowFocusCallback noopSetWindowFocusCallback(long $, GLFWWindowFocusCallbackI cbfun) {
 		return null;
 	}
 
@@ -224,7 +293,7 @@ public abstract class WindowMixin implements WindowExt {
 			)
 	)
 	@Nullable
-	private static GLFWCursorEnterCallback sapphireSetCursorEnterCallback(long $, GLFWCursorEnterCallbackI cbfun) {
+	private static GLFWCursorEnterCallback noopSetCursorEnterCallback(long $, GLFWCursorEnterCallbackI cbfun) {
 		return null;
 	}
 
@@ -236,12 +305,12 @@ public abstract class WindowMixin implements WindowExt {
 			)
 	)
 	@Nullable
-	private static GLFWWindowIconifyCallback sapphireSetWindowIconifyCallback(long $, GLFWWindowIconifyCallbackI cbfun) {
+	private static GLFWWindowIconifyCallback noopSetWindowIconifyCallback(long $, GLFWWindowIconifyCallbackI cbfun) {
 		return null;
 	}
 
-	@Overwrite
-	public boolean shouldClose() {
+	@Redirect(method = "shouldClose", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/GLX;_shouldClose(Lcom/mojang/blaze3d/platform/Window;)Z"))
+	private boolean sdlCloseRequested(Window window) {
 		return this.closeRequested;
 	}
 
@@ -250,12 +319,56 @@ public abstract class WindowMixin implements WindowExt {
 
 	}
 
+	/**
+	 * @author Maximum
+	 * @reason SDL
+	 */
 	@Overwrite
 	private void setMode() {
+		boolean wasFullscreen = (SDL_GetWindowFlags(this.handle) & SDL_WINDOW_FULLSCREEN) != 0;
+		if (this.fullscreen) {
+			Monitor monitor = this.monitorManager.findBestMonitor((Window) (Object) this);
+			if (monitor == null) {
+				LOGGER.warn("Failed to find suitable monitor for fullscreen mode");
+				this.fullscreen = false;
+			} else {
+				VideoMode mode = monitor.getPreferredVidMode(this.preferredFullscreenVideoMode);
+				if (!wasFullscreen) {
+					this.windowedX = this.x;
+					this.windowedY = this.y;
+					this.windowedWidth = allowedWindowMinSize(this.width);
+					this.windowedHeight = allowedWindowMinSize(this.height);
+				}
+
+				this.x = monitor.x();
+				this.y = monitor.y();
+				SDL_SetWindowPosition(this.handle, this.x, this.y);
+
+				this.width = allowedWindowMinSize(mode.getWidth());
+				this.height = allowedWindowMinSize(mode.getHeight());
+				SDL_SetWindowSize(this.handle, this.width, this.height);
+
+				if (this.exclusiveFullscreen) {
+					// Manually invoke this because lwjgl is just broken
+					JNI.invokePPZ(this.handle, mode.sapphire$displayMode().address(), SDLVideo.Functions.SetWindowFullscreenMode);
+				}
+				SDL_SetWindowFullscreen(this.handle, true);
+			}
+		} else {
+			this.x = this.windowedX;
+			this.y = this.windowedY;
+			SDL_SetWindowPosition(this.handle, this.x, this.y);
+
+			this.width = allowedWindowMinSize(this.windowedWidth);
+			this.height = allowedWindowMinSize(this.windowedHeight);
+			SDL_SetWindowSize(this.handle, this.width, this.height);
+
+			SDL_SetWindowFullscreen(this.handle, false);
+		}
 	}
 
 	@Redirect(method = "setTitle", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSetWindowTitle(JLjava/lang/CharSequence;)V"))
-	private void sdlSetWindowTitle(long window, CharSequence title) {
+	private static void sdlSetWindowTitle(long window, CharSequence title) {
 		SDL_SetWindowTitle(window, title);
 	}
 
@@ -286,6 +399,11 @@ public abstract class WindowMixin implements WindowExt {
 				this.framebufferHeight = 1;
 			}
 		}
+	}
+
+	@Overwrite
+	public void defaultErrorCallback(final int errorCode, final long description) {
+		System.out.println(Arrays.toString(new Throwable().getStackTrace()));
 	}
 
 	@Overwrite

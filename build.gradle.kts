@@ -41,10 +41,9 @@ repositories {
 
 dependencies {
     minecraft(libs.minecraft)
+	api(libs.bundles.fabric)
 
-	implementation(libs.bundles.fabric)
-
-    implementation(libs.lwjgl.sdl)
+    api(libs.lwjgl.sdl)
     val platforms = listOf("macos", "macos-arm64", "linux", "windows", "windows-arm64", "windows-x86")
     platforms.forEach { platform ->
         val module = variantOf(libs.lwjgl.sdl) { classifier("natives-$platform") }

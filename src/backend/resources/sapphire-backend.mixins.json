@@ -4,6 +4,7 @@
   "package": "me.maximumpower55.sapphire.backend.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "Blaze3DMixin",
     "MinecraftMixin",
     "RenderSystemMixin",
     "input.InputConstants_TypeMixin",
@@ -19,6 +20,9 @@
     "vulkan.VulkanInstanceMixin",
     "vulkan.VulkanPhysicalDeviceMixin",
     "window.MinecraftMixin",
+    "window.MonitorManagerMixin",
+    "window.MonitorMixin",
+    "window.VideoModeMixin",
     "window.WindowMixin"
   ],
   "injectors": {

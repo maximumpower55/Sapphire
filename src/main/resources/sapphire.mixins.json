@@ -4,6 +4,7 @@
   "package": "me.maximumpower55.sapphire.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "VideoSettingsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
