@@ -29,6 +29,7 @@ import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_X_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_Y_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowFullscreen;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowIcon;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowPosition;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowSize;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowTitle;
@@ -36,14 +37,20 @@ import static org.lwjgl.sdl.SDLVideo.SDL_WINDOWPOS_CENTERED_DISPLAY;
 import static org.lwjgl.sdl.SDLVideo.SDL_WINDOW_FULLSCREEN;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.commons.io.IOUtils;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFWCursorEnterCallback;
 import org.lwjgl.glfw.GLFWCursorEnterCallbackI;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallbackI;
 import org.lwjgl.glfw.GLFWWindowFocusCallback;
@@ -55,7 +62,10 @@ import org.lwjgl.glfw.GLFWWindowPosCallbackI;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.glfw.GLFWWindowSizeCallbackI;
 import org.lwjgl.sdl.SDLError;
+import org.lwjgl.sdl.SDLIOStream;
+import org.lwjgl.sdl.SDLSurface;
 import org.lwjgl.sdl.SDLVideo;
+import org.lwjgl.sdl.SDL_Surface;
 import org.lwjgl.sdl.SDL_WindowEvent;
 import org.lwjgl.system.JNI;
 import org.lwjgl.system.MemoryStack;
@@ -79,9 +89,12 @@ import com.mojang.renderpearl.api.device.GpuBackend;
 import com.mojang.renderpearl.backend.opengl.GlBackend;
 import com.mojang.renderpearl.backend.vulkan.VulkanBackend;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.maximumpower55.sapphire.backend.SapphireEventHandler;
 import me.maximumpower55.sapphire.backend.extension.WindowExt;
 import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.resources.IoSupplier;
 
 @Mixin(Window.class)
 public abstract class WindowMixin implements WindowExt {
@@ -149,7 +162,15 @@ public abstract class WindowMixin implements WindowExt {
 	@Unique
 	private int id;
 	@Unique
+	private Runnable closeCallback;
+	@Unique
 	private boolean closeRequested;
+
+	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFWErrorCallback;create(Lorg/lwjgl/glfw/GLFWErrorCallbackI;)Lorg/lwjgl/glfw/GLFWErrorCallback;"))
+	@Nullable
+	private static GLFWErrorCallback noopErrorCallback(GLFWErrorCallbackI instance) {
+		return null;
+	}
 
 	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwGetPrimaryMonitor()J"))
 	private static long sdlGetPrimaryDisplay() {
@@ -299,9 +320,36 @@ public abstract class WindowMixin implements WindowExt {
 		return this.closeRequested;
 	}
 
+	/**
+	 * @author Maximum
+	 * @reason SDL
+	 */
 	@Overwrite
 	public void setIcon(PackResources resources, IconSet iconSet) throws IOException {
+		List<IoSupplier<InputStream>> iconStreams = iconSet.getStandardIcons(resources);
 
+		ObjectList<SDL_Surface> icons = new ObjectArrayList<>();
+		try (MemoryStack stack = MemoryStack.stackPush()) {
+			for (IoSupplier<InputStream> iconStream : iconStreams) {
+				InputStream stream = iconStream.get();
+				try {
+					ByteBuffer iconBuf = stack.bytes(stream.readAllBytes());
+					SDL_Surface icon = SDLSurface.SDL_LoadPNG_IO(SDLIOStream.SDL_IOFromMem(iconBuf), true);
+					if (icon != null) {
+						if (!icons.isEmpty()) {
+							SDLSurface.SDL_AddSurfaceAlternateImage(icons.getFirst(), icon);
+						}
+						icons.add(icon);
+					}
+				} finally {
+					IOUtils.closeQuietly(stream);
+				}
+			}
+
+			SDL_SetWindowIcon(this.handle, icons.getFirst());
+		} finally {
+			icons.forEach(SDLSurface::SDL_DestroySurface);
+		}
 	}
 
 	/**
@@ -392,12 +440,28 @@ public abstract class WindowMixin implements WindowExt {
 		System.out.println(Arrays.toString(new Throwable().getStackTrace()));
 	}
 
+	/**
+	 * @author Maximum
+	 * @reason Noop
+	 */
 	@Overwrite
-	public void updateRawMouseInput(boolean value) {
+	public static void setBootErrorCallback() {
 	}
 
+	/**
+	 * @author Maximum
+	 * @reason Noop
+	 */
+	@Overwrite
+	public void setDefaultErrorCallback() {
+	}
+
+	/**
+	 * @author Maximum
+	 * @reason SDL
+	 */
 	@Overwrite
 	public void setWindowCloseCallback(Runnable task) {
-// TODO: close callback
+		this.closeCallback = task;
 	}
 }

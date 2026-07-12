@@ -17,12 +17,19 @@ import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMaps;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import net.minecraft.SharedConstants;
 
 public final class SDLHelper {
+	// Sourced from VulkanInstance
+	public static final String APPLICATION_NAME = "Minecraft Java Edition";
+	public static final String APPLICATION_VERSION = SharedConstants.getCurrentVersion().name();
+	public static final String APPLICATION_IDENTIFIER = "com.mojang.minecraftje"; // com.mojang.minecraft is used by the official launcher
+
 	private SDLHelper() {
 	}
 
 	public static void init() {
+		SDLInit.SDL_SetAppMetadata(APPLICATION_NAME, APPLICATION_VERSION, APPLICATION_IDENTIFIER);
 		SDLInit.SDL_Init(SDLInit.SDL_INIT_EVENTS | SDLInit.SDL_INIT_VIDEO);
 
 		// Note: GLFW implicitly loads libraries, it is never supplied with libraries by the game

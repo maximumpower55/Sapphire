@@ -4,6 +4,7 @@ import static org.lwjgl.sdl.SDLVideo.SDL_GetDisplayBounds;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetDisplayName;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetFullscreenDisplayModes;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
@@ -17,10 +18,12 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.blaze3d.platform.VideoMode;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.fastutil.objects.ObjectLists;
 import me.maximumpower55.sapphire.backend.extension.VideoModeExt;
 
 @Mixin(Monitor.class)
@@ -28,6 +31,10 @@ public class MonitorMixin {
 	@Shadow
 	@Final
 	private static Logger LOGGER;
+
+	@Shadow
+	@Final
+	private List<VideoMode> videoModes;
 
 	/**
 	 * @author Maximum
@@ -40,7 +47,7 @@ public class MonitorMixin {
 
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			String displayName = Objects.requireNonNull(SDL_GetDisplayName(displayId));
-			ImmutableList.Builder<VideoMode> videoModes = ImmutableList.builder();
+			ObjectList<VideoMode> videoModes = new ObjectArrayList<>();
 			PointerBuffer modes = SDL_GetFullscreenDisplayModes(displayId);
 			if (modes == null) {
 				LOGGER.warn("Failed to query video modes of monitor {}", displayName);
@@ -57,13 +64,11 @@ public class MonitorMixin {
 
 			SDL_Rect displayBounds = SDL_Rect.malloc(stack);
 			if (SDL_GetDisplayBounds(displayId, displayBounds)) {
-				// Note: Actual current display mode is broken on wayland, this should emulate the correct behavior
-				SDL_DisplayMode currentDisplayMode = SDL_DisplayMode.create(modes.get(0));
 				return new Monitor(
 						displayName,
 						monitor,
-						videoModes.build(),
-						VideoModeExt.create(currentDisplayMode),
+						ObjectLists.unmodifiable(videoModes),
+						videoModes.getFirst(),
 						displayBounds.x(),
 						displayBounds.y()
 				);
