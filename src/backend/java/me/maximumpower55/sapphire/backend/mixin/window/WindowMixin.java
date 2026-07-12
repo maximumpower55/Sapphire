@@ -64,10 +64,8 @@ import org.lwjgl.glfw.GLFWWindowSizeCallbackI;
 import org.lwjgl.sdl.SDLError;
 import org.lwjgl.sdl.SDLIOStream;
 import org.lwjgl.sdl.SDLSurface;
-import org.lwjgl.sdl.SDLVideo;
 import org.lwjgl.sdl.SDL_Surface;
 import org.lwjgl.sdl.SDL_WindowEvent;
-import org.lwjgl.system.JNI;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
@@ -335,10 +333,11 @@ public abstract class WindowMixin implements WindowExt {
 				try {
 					ByteBuffer iconBuf = stack.bytes(stream.readAllBytes());
 					SDL_Surface icon = SDLSurface.SDL_LoadPNG_IO(SDLIOStream.SDL_IOFromMem(iconBuf), true);
-					if (icon != null) {
+					if (icon != null && icon.w() >= 64) {
 						if (!icons.isEmpty()) {
 							SDLSurface.SDL_AddSurfaceAlternateImage(icons.getFirst(), icon);
 						}
+
 						icons.add(icon);
 					}
 				} finally {
@@ -381,11 +380,6 @@ public abstract class WindowMixin implements WindowExt {
 				this.height = allowedWindowMinSize(mode.getHeight());
 				SDL_SetWindowSize(this.handle, this.width, this.height);
 
-				if (this.exclusiveFullscreen) {
-					// Manually invoke this because lwjgl is just broken
-					//noinspection resource
-					JNI.invokePPZ(this.handle, mode.sapphire$displayMode().address(), SDLVideo.Functions.SetWindowFullscreenMode);
-				}
 				SDL_SetWindowFullscreen(this.handle, true);
 			}
 		} else {
