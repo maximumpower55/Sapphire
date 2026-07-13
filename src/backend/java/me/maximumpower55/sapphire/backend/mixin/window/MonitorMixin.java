@@ -1,5 +1,6 @@
 package me.maximumpower55.sapphire.backend.mixin.window;
 
+import static org.lwjgl.sdl.SDLVideo.SDL_GetCurrentDisplayMode;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetDisplayBounds;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetDisplayName;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetFullscreenDisplayModes;
@@ -64,14 +65,17 @@ public class MonitorMixin {
 
 			SDL_Rect displayBounds = SDL_Rect.malloc(stack);
 			if (SDL_GetDisplayBounds(displayId, displayBounds)) {
-				return new Monitor(
-						displayName,
-						monitor,
-						ObjectLists.unmodifiable(videoModes),
-						videoModes.getFirst(),
-						displayBounds.x(),
-						displayBounds.y()
-				);
+				SDL_DisplayMode currentDisplayMode = SDL_GetCurrentDisplayMode(displayId);
+				if (currentDisplayMode != null) {
+					return new Monitor(
+							displayName,
+							monitor,
+							ObjectLists.unmodifiable(videoModes),
+							VideoModeExt.create(currentDisplayMode),
+							displayBounds.x(),
+							displayBounds.y()
+					);
+				}
 			}
 
 			LOGGER.warn("Failed to query current video mode of monitor {}", displayName);

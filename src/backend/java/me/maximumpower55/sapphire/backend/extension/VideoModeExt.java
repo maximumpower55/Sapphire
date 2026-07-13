@@ -26,17 +26,17 @@ public interface VideoModeExt {
 					Integer.bitCount(Bmask.get()),
 					(int) displayMode.refresh_rate()
 			);
-			videoMode.sapphire$displayMode(displayMode);
+			videoMode.sapphire$refreshRate(displayMode.refresh_rate());
 
 			return videoMode;
 		}
 	}
 
-	default SDL_DisplayMode sapphire$displayMode() {
+	default float sapphire$refreshRate() {
 		throw new AssertionError("Implemented in Mixin");
 	}
 
-	default void sapphire$displayMode(SDL_DisplayMode displayMode) {
+	default void sapphire$refreshRate(float refreshRate) {
 		throw new AssertionError("Implemented in Mixin");
 	}
 }

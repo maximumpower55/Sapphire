@@ -49,8 +49,6 @@ import org.apache.commons.io.IOUtils;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFWCursorEnterCallback;
 import org.lwjgl.glfw.GLFWCursorEnterCallbackI;
-import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallbackI;
 import org.lwjgl.glfw.GLFWWindowFocusCallback;
@@ -153,9 +151,6 @@ public abstract class WindowMixin implements WindowExt {
 	private int windowedHeight;
 	@Shadow
 	private Optional<VideoMode> preferredFullscreenVideoMode;
-	@Shadow
-	@Final
-	private boolean exclusiveFullscreen;
 
 	@Unique
 	private int id;
@@ -163,12 +158,6 @@ public abstract class WindowMixin implements WindowExt {
 	private Runnable closeCallback;
 	@Unique
 	private boolean closeRequested;
-
-	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFWErrorCallback;create(Lorg/lwjgl/glfw/GLFWErrorCallbackI;)Lorg/lwjgl/glfw/GLFWErrorCallback;"))
-	@Nullable
-	private static GLFWErrorCallback noopErrorCallback(GLFWErrorCallbackI instance) {
-		return null;
-	}
 
 	@Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwGetPrimaryMonitor()J"))
 	private static long sdlGetPrimaryDisplay() {

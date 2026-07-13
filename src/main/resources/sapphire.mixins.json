@@ -1,9 +1,13 @@
 {
   "required": true,
   "minVersion": "0.8",
+  "mixinextras": {
+    "minVersion": "0.5.0-beta.1"
+  },
   "package": "me.maximumpower55.sapphire.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "OptionsMixin",
     "VideoSettingsScreenMixin"
   ],
   "injectors": {

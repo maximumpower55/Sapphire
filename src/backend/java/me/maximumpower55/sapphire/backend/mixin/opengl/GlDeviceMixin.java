@@ -11,9 +11,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-import com.mojang.renderpearl.backend.opengl.GlDevice;
-
-@Mixin(GlDevice.class)
+@Mixin(targets = "com.mojang.renderpearl.backend.opengl.GlDevice")
 public class GlDeviceMixin {
 	@Unique
 	@Nullable
