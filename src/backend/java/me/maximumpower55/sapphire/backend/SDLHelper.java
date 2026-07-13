@@ -39,6 +39,10 @@ public final class SDLHelper {
 		}
 	}
 
+	public static int scalePixel(int pixel, float scale) {
+		return Math.round(pixel * scale);
+	}
+
 	private static final Pair<Int2IntMap, Int2IntMap> KEY_MAPPING = createGlfwMapping(SDLKeycode.class, "SDLK_", "GLFW_KEY_", name -> name
 			.replace("LEFT_", "L")
 			.replace("RIGHT_", "R")

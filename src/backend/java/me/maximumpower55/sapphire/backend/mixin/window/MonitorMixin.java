@@ -57,9 +57,12 @@ public class MonitorMixin {
 
 			for (int i = modes.limit() - 1; i >= 0; i--) {
 				SDL_DisplayMode displayMode = SDL_DisplayMode.create(modes.get(i));
-				VideoMode videoMode = VideoModeExt.create(displayMode);
-				if (videoMode.getRedBits() >= 8 && videoMode.getGreenBits() >= 8 && videoMode.getBlueBits() >= 8) {
-					videoModes.add(videoMode);
+				// Note: GLFW ignores scaling
+				if (displayMode.pixel_density() == 1) {
+					VideoMode videoMode = VideoModeExt.create(displayMode);
+					if (videoMode.getRedBits() >= 8 && videoMode.getGreenBits() >= 8 && videoMode.getBlueBits() >= 8) {
+						videoModes.add(videoMode);
+					}
 				}
 			}
 

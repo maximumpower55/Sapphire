@@ -1,6 +1,9 @@
 {
   "required": true,
   "minVersion": "0.8",
+  "mixinextras": {
+    "minVersion": "0.5.0-beta.1"
+  },
   "package": "me.maximumpower55.sapphire.backend.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
@@ -15,12 +18,14 @@
     "input.MouseHandlerMixin",
     "input.TextInputManagerMixin",
     "opengl.GlBackendMixin",
+    "opengl.GlCommandEncoderMixin",
     "opengl.GlDeviceMixin",
     "opengl.GlSurfaceMixin",
     "vulkan.VulkanBackendMixin",
     "vulkan.VulkanGpuSurfaceMixin",
     "vulkan.VulkanInstanceMixin",
     "vulkan.VulkanPhysicalDeviceMixin",
+    "window.GameRendererMixin",
     "window.MinecraftMixin",
     "window.MonitorManagerMixin",
     "window.MonitorMixin",

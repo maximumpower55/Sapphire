@@ -1,8 +1,12 @@
 package me.maximumpower55.sapphire.backend.mixin.window;
 
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_CLOSE_REQUESTED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_ENTER_FULLSCREEN;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_FOCUS_GAINED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_FOCUS_LOST;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_LEAVE_FULLSCREEN;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MAXIMIZED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MINIMIZED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOUSE_ENTER;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOUSE_LEAVE;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOVED;
@@ -31,7 +35,6 @@ import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_Y_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowFullscreen;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowIcon;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowPosition;
-import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowSize;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowTitle;
 import static org.lwjgl.sdl.SDLVideo.SDL_WINDOWPOS_CENTERED_DISPLAY;
 import static org.lwjgl.sdl.SDLVideo.SDL_WINDOW_FULLSCREEN;
@@ -40,7 +43,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -65,6 +67,7 @@ import org.lwjgl.sdl.SDLSurface;
 import org.lwjgl.sdl.SDL_Surface;
 import org.lwjgl.sdl.SDL_WindowEvent;
 import org.lwjgl.system.MemoryStack;
+import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -72,7 +75,9 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.blaze3d.platform.IconSet;
 import com.mojang.blaze3d.platform.Monitor;
@@ -152,10 +157,21 @@ public abstract class WindowMixin implements WindowExt {
 	@Shadow
 	private Optional<VideoMode> preferredFullscreenVideoMode;
 
+	@Shadow
+	protected abstract void onIconify(long handle, boolean iconified);
+
+	@Shadow
+	public abstract int getWidth();
+
+	@Shadow
+	public abstract int getHeight();
+
 	@Unique
 	private int id;
 	@Unique
-	private Runnable closeCallback;
+	private int renderWidth;
+	@Unique
+	private int renderHeight;
 	@Unique
 	private boolean closeRequested;
 
@@ -226,7 +242,53 @@ public abstract class WindowMixin implements WindowExt {
 			case SDL_EVENT_WINDOW_FOCUS_LOST -> this.onFocus(this.handle, false);
 			case SDL_EVENT_WINDOW_MOUSE_ENTER -> this.onEnter(this.handle, true);
 			case SDL_EVENT_WINDOW_MOUSE_LEAVE -> this.onEnter(this.handle, false);
+			case SDL_EVENT_WINDOW_MINIMIZED -> this.onIconify(this.handle, true);
+			case SDL_EVENT_WINDOW_MAXIMIZED -> this.onIconify(this.handle, false);
+			case SDL_EVENT_WINDOW_ENTER_FULLSCREEN -> this.fullscreen = true;
+			case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN -> this.fullscreen = false;
 			case SDL_EVENT_WINDOW_CLOSE_REQUESTED -> this.closeRequested = true;
+		}
+	}
+
+	@Override
+	public int sapphire$renderWidth() {
+		return this.renderWidth;
+	}
+
+	@Override
+	public int sapphire$renderHeight() {
+		return this.renderHeight;
+	}
+
+	@Redirect(
+			method = {"calculateScale", "setGuiScale"},
+			at = @At(
+					value = "FIELD",
+					target = "Lcom/mojang/blaze3d/platform/Window;framebufferWidth:I",
+					opcode = Opcodes.GETFIELD
+			)
+	)
+	private static int useRenderWidthInGui(Window instance) {
+		return instance.sapphire$renderWidth();
+	}
+
+	@Redirect(
+			method = {"calculateScale", "setGuiScale"},
+			at = @At(
+					value = "FIELD",
+					target = "Lcom/mojang/blaze3d/platform/Window;framebufferHeight:I",
+					opcode = Opcodes.GETFIELD
+			)
+	)
+	private static int useRenderHeightInGui(Window instance) {
+		return instance.sapphire$renderHeight();
+	}
+
+	@Inject(method = "onFramebufferResize", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/WindowEventHandler;framebufferSizeChanged()V"))
+	private void updateRenderSize(long handle, int newWidth, int newHeight, CallbackInfo ci) {
+		if (!this.fullscreen) {
+			this.renderWidth = newWidth;
+			this.renderHeight = newHeight;
 		}
 	}
 
@@ -365,9 +427,8 @@ public abstract class WindowMixin implements WindowExt {
 				this.y = monitor.y();
 				SDL_SetWindowPosition(this.handle, this.x, this.y);
 
-				this.width = allowedWindowMinSize(mode.getWidth());
-				this.height = allowedWindowMinSize(mode.getHeight());
-				SDL_SetWindowSize(this.handle, this.width, this.height);
+				this.renderWidth = mode.getWidth();
+				this.renderHeight = mode.getHeight();
 
 				SDL_SetWindowFullscreen(this.handle, true);
 			}
@@ -375,10 +436,6 @@ public abstract class WindowMixin implements WindowExt {
 			this.x = this.windowedX;
 			this.y = this.windowedY;
 			SDL_SetWindowPosition(this.handle, this.x, this.y);
-
-			this.width = allowedWindowMinSize(this.windowedWidth);
-			this.height = allowedWindowMinSize(this.windowedHeight);
-			SDL_SetWindowSize(this.handle, this.width, this.height);
 
 			SDL_SetWindowFullscreen(this.handle, false);
 		}
@@ -409,18 +466,13 @@ public abstract class WindowMixin implements WindowExt {
 			IntBuffer w = stack.mallocInt(1);
 			IntBuffer h = stack.mallocInt(1);
 			if (SDL_GetWindowSizeInPixels(this.handle, w, h)) {
-				this.framebufferWidth = w.get();
-				this.framebufferHeight = h.get();
+				this.renderWidth = this.framebufferWidth = w.get();
+				this.renderHeight = this.framebufferHeight = h.get();
 			} else {
-				this.framebufferWidth = 1;
-				this.framebufferHeight = 1;
+				this.renderWidth = this.framebufferWidth = 1;
+				this.renderHeight = this.framebufferHeight = 1;
 			}
 		}
-	}
-
-	@Overwrite
-	public void defaultErrorCallback(final int errorCode, final long description) {
-		System.out.println(Arrays.toString(new Throwable().getStackTrace()));
 	}
 
 	/**
@@ -445,6 +497,5 @@ public abstract class WindowMixin implements WindowExt {
 	 */
 	@Overwrite
 	public void setWindowCloseCallback(Runnable task) {
-		this.closeCallback = task;
 	}
 }

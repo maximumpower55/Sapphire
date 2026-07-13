@@ -6,4 +6,12 @@ public interface WindowExt {
 	default void sapphire$onEvent(SDL_WindowEvent event) {
 		throw new AssertionError("Implemented in Mixin");
 	}
+
+	default int sapphire$renderWidth() {
+		throw new AssertionError("Implemented in Mixin");
+	}
+
+	default int sapphire$renderHeight() {
+		throw new AssertionError("Implemented in Mixin");
+	}
 }
