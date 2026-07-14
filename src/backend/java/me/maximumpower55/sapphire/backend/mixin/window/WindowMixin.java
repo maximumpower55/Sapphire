@@ -158,14 +158,13 @@ public abstract class WindowMixin implements WindowExt {
 	private Optional<VideoMode> preferredFullscreenVideoMode;
 
 	@Shadow
-	protected abstract void onIconify(long handle, boolean iconified);
-
-	@Shadow
 	public abstract int getWidth();
 
 	@Shadow
 	public abstract int getHeight();
 
+	@Shadow
+	private boolean minimized;
 	@Unique
 	private int id;
 	@Unique
@@ -242,8 +241,8 @@ public abstract class WindowMixin implements WindowExt {
 			case SDL_EVENT_WINDOW_FOCUS_LOST -> this.onFocus(this.handle, false);
 			case SDL_EVENT_WINDOW_MOUSE_ENTER -> this.onEnter(this.handle, true);
 			case SDL_EVENT_WINDOW_MOUSE_LEAVE -> this.onEnter(this.handle, false);
-			case SDL_EVENT_WINDOW_MINIMIZED -> this.onIconify(this.handle, true);
-			case SDL_EVENT_WINDOW_MAXIMIZED -> this.onIconify(this.handle, false);
+			case SDL_EVENT_WINDOW_MINIMIZED -> this.minimized = true;
+			case SDL_EVENT_WINDOW_MAXIMIZED -> this.minimized = false;
 			case SDL_EVENT_WINDOW_ENTER_FULLSCREEN -> this.fullscreen = true;
 			case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN -> this.fullscreen = false;
 			case SDL_EVENT_WINDOW_CLOSE_REQUESTED -> this.closeRequested = true;
