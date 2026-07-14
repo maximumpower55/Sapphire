@@ -1,5 +1,5 @@
 [versions]
-loom = "1.15.+"
+loom = "1.17.+"
 
 minecraft = "26.3-snapshot-3"
 # https://fabricmc.net/develop

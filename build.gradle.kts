@@ -2,7 +2,6 @@ plugins {
 	alias(libs.plugins.loom)
 }
 
-base.archivesName = "sapphire"
 group = "me.maximumpower55"
 
 val buildNum = providers.environmentVariable("GITHUB_RUN_NUMBER")
@@ -13,43 +12,44 @@ val buildNum = providers.environmentVariable("GITHUB_RUN_NUMBER")
 
 version = "0.1.0+$buildNum-mc${libs.versions.minecraft.get()}"
 
-sourceSets {
-    val main = getByName("main")
-    val backend = create("backend")
-
-    backend.apply {
-        java {
-            compileClasspath += configurations.compileClasspath.get()
-        }
-    }
-
-    main.apply {
-        java {
-            compileClasspath += backend.output
-            runtimeClasspath += backend.output
-        }
-    }
-}
-
-repositories {
-	exclusiveContent {
-        forRepositories(maven("https://api.modrinth.com/maven")).filter {
-            includeGroup("maven.modrinth")
-        }
-    }
-}
-
 dependencies {
     minecraft(libs.minecraft)
 	api(libs.bundles.fabric)
 
-    api(libs.lwjgl.sdl)
+    include(libs.lwjgl.sdl)
+    implementation(libs.lwjgl.sdl)
     val platforms = listOf("macos", "macos-arm64", "linux", "windows", "windows-arm64", "windows-x86")
     platforms.forEach { platform ->
         val module = variantOf(libs.lwjgl.sdl) { classifier("natives-$platform") }
         include(module)
         runtimeOnly(module)
     }
+}
+
+java {
+    withSourcesJar()
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+sourceSets {
+    create("backend") {
+        java {
+            compileClasspath += configurations.compileClasspath.get()
+        }
+    }
+
+    named("main") {
+        java {
+            compileClasspath += sourceSets["backend"].output
+            runtimeClasspath += sourceSets["backend"].output
+        }
+    }
+}
+
+tasks.withType<Jar> {
+    from(sourceSets["backend"].output)
+
+    from(rootProject.file("LICENSE"))
 }
 
 tasks.processResources {
@@ -69,14 +69,11 @@ loom {
 
 	runs {
         configureEach {
-            property("mixin.debug.export", "true")
-            vmArg("-XX:+AllowEnhancedClassRedefinition")
-            vmArg("-XX:+IgnoreUnrecognizedVMOptions")
+            preferGradleTask = true
+
+            systemProperties.put("mixin.debug.export", "true")
+            jvmArguments.add("-XX:+AllowEnhancedClassRedefinition")
+            jvmArguments.add("-XX:+IgnoreUnrecognizedVMOptions")
         }
 	}
-}
-
-java {
-	withSourcesJar()
-    toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
