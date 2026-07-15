@@ -5,13 +5,13 @@ import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_ENTER_FULLSCREEN;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_FOCUS_GAINED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_FOCUS_LOST;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_LEAVE_FULLSCREEN;
-import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MAXIMIZED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MINIMIZED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOUSE_ENTER;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOUSE_LEAVE;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_MOVED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED;
 import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_RESIZED;
+import static org.lwjgl.sdl.SDLEvents.SDL_EVENT_WINDOW_RESTORED;
 import static org.lwjgl.sdl.SDLProperties.SDL_CreateProperties;
 import static org.lwjgl.sdl.SDLProperties.SDL_SetBooleanProperty;
 import static org.lwjgl.sdl.SDLProperties.SDL_SetNumberProperty;
@@ -19,7 +19,6 @@ import static org.lwjgl.sdl.SDLProperties.SDL_SetStringProperty;
 import static org.lwjgl.sdl.SDLVideo.SDL_CreateWindowWithProperties;
 import static org.lwjgl.sdl.SDLVideo.SDL_DestroyWindow;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetPrimaryDisplay;
-import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowFlags;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowPosition;
 import static org.lwjgl.sdl.SDLVideo.SDL_GetWindowSizeInPixels;
 import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER;
@@ -35,9 +34,10 @@ import static org.lwjgl.sdl.SDLVideo.SDL_PROP_WINDOW_CREATE_Y_NUMBER;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowFullscreen;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowIcon;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowPosition;
+import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowSize;
 import static org.lwjgl.sdl.SDLVideo.SDL_SetWindowTitle;
+import static org.lwjgl.sdl.SDLVideo.SDL_SyncWindow;
 import static org.lwjgl.sdl.SDLVideo.SDL_WINDOWPOS_CENTERED_DISPLAY;
-import static org.lwjgl.sdl.SDLVideo.SDL_WINDOW_FULLSCREEN;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -158,15 +158,14 @@ public abstract class WindowMixin implements WindowExt {
 	private Optional<VideoMode> preferredFullscreenVideoMode;
 
 	@Shadow
-	public abstract int getWidth();
-
-	@Shadow
-	public abstract int getHeight();
-
-	@Shadow
 	private boolean minimized;
-	@Unique
-	private int id;
+
+	@Shadow
+	private boolean actuallyFullscreen;
+
+	@Shadow
+	public abstract void updateFullscreenIfChanged();
+
 	@Unique
 	private int renderWidth;
 	@Unique
@@ -231,6 +230,18 @@ public abstract class WindowMixin implements WindowExt {
 		return window;
 	}
 
+	@Unique
+	private void onFullscreen(boolean fullscreen) {
+		this.fullscreen = fullscreen;
+		if (this.fullscreen) {
+			this.windowedX = this.x;
+			this.windowedY = this.y;
+			this.windowedWidth = allowedWindowMinSize(this.width);
+			this.windowedHeight = allowedWindowMinSize(this.height);
+		}
+		this.updateFullscreenIfChanged();
+	}
+
 	@Override
 	public void sapphire$onEvent(SDL_WindowEvent event) {
 		switch (event.type()) {
@@ -242,9 +253,9 @@ public abstract class WindowMixin implements WindowExt {
 			case SDL_EVENT_WINDOW_MOUSE_ENTER -> this.onEnter(this.handle, true);
 			case SDL_EVENT_WINDOW_MOUSE_LEAVE -> this.onEnter(this.handle, false);
 			case SDL_EVENT_WINDOW_MINIMIZED -> this.minimized = true;
-			case SDL_EVENT_WINDOW_MAXIMIZED -> this.minimized = false;
-			case SDL_EVENT_WINDOW_ENTER_FULLSCREEN -> this.fullscreen = true;
-			case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN -> this.fullscreen = false;
+			case SDL_EVENT_WINDOW_RESTORED -> this.minimized = false;
+			case SDL_EVENT_WINDOW_ENTER_FULLSCREEN -> this.onFullscreen(true);
+			case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN -> this.onFullscreen(false);
 			case SDL_EVENT_WINDOW_CLOSE_REQUESTED -> this.closeRequested = true;
 		}
 	}
@@ -407,7 +418,6 @@ public abstract class WindowMixin implements WindowExt {
 	 */
 	@Overwrite
 	private void setMode() {
-		boolean wasFullscreen = (SDL_GetWindowFlags(this.handle) & SDL_WINDOW_FULLSCREEN) != 0;
 		if (this.fullscreen) {
 			Monitor monitor = this.monitorManager.findBestMonitor((Window) (Object) this);
 			if (monitor == null) {
@@ -415,28 +425,18 @@ public abstract class WindowMixin implements WindowExt {
 				this.fullscreen = false;
 			} else {
 				VideoMode mode = monitor.getPreferredVidMode(this.preferredFullscreenVideoMode);
-				if (!wasFullscreen) {
-					this.windowedX = this.x;
-					this.windowedY = this.y;
-					this.windowedWidth = allowedWindowMinSize(this.width);
-					this.windowedHeight = allowedWindowMinSize(this.height);
-				}
-
-				this.x = monitor.x();
-				this.y = monitor.y();
-				SDL_SetWindowPosition(this.handle, this.x, this.y);
-
 				this.renderWidth = mode.getWidth();
 				this.renderHeight = mode.getHeight();
 
 				SDL_SetWindowFullscreen(this.handle, true);
+				SDL_SyncWindow(this.handle);
+				SDL_SetWindowPosition(this.handle, monitor.x(), monitor.y());
 			}
 		} else {
-			this.x = this.windowedX;
-			this.y = this.windowedY;
-			SDL_SetWindowPosition(this.handle, this.x, this.y);
-
 			SDL_SetWindowFullscreen(this.handle, false);
+			SDL_SetWindowPosition(this.handle, this.windowedX, this.windowedY);
+			SDL_SetWindowSize(this.handle, this.windowedWidth, this.windowedHeight);
+			SDL_SyncWindow(this.handle);
 		}
 	}
 

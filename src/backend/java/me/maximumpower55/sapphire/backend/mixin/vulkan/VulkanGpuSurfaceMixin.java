@@ -42,7 +42,6 @@ public class VulkanGpuSurfaceMixin {
 		return 0;
 	}
 
-	// TODO: Clean this up
 	@Definition(id = "srcOffsets", local = @Local(type = VkOffset3D.Buffer.class, name = "srcOffsets"))
 	@Definition(id = "x", method = "Lorg/lwjgl/vulkan/VkOffset3D$Buffer;x(I)Lorg/lwjgl/vulkan/VkOffset3D$Buffer;")
 	@Definition(id = "y", method = "Lorg/lwjgl/vulkan/VkOffset3D$Buffer;y(I)Lorg/lwjgl/vulkan/VkOffset3D$Buffer;")
