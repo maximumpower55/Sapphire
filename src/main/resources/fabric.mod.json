@@ -3,12 +3,14 @@
   "id": "sapphire",
   "version": "${version}",
   "name": "Sapphire",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "An mod that loads Minecraft through SDL3 instead of GLFW, as an interesting Proof-Of-Concept",
   "authors": [
     "maximumpower55"
   ],
   "contact": {
-    "sources": "https://github.com/maximumpower55/Sapphire"
+    "homepage": "https://github.com/maximumpower55/Sapphire",
+    "sources": "https://github.com/maximumpower55/Sapphire",
+    "issues": "https://github.com/maximumpower55/Sapphire/issues"
   },
   "license": "MIT",
   "icon": "assets/sapphire/icon.png",

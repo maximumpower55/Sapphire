@@ -1,13 +1,11 @@
-# Fabric Example Mod
+<img src="src/main/resources/assets/sapphire/icon.png" width="128">
 
-# Stuff
-This template mod, in addition to the features of the standard template mod,
-also has an example test mod as well as an example gametest setup. It uses Mojang
-mappings primarily, but also uses Quilt Mappings for Javadocs and parameter names.
+# Sapphire
 
-## Setup
-For setup instructions please see the [fabric wiki page](https://fabricmc.net/wiki/tutorial:setup) that relates to the
-IDE that you are using.
+An mod that loads Minecraft through SDL3 instead of GLFW, as an interesting Proof-Of-Concept.
+
+Visually you shouldn't notice anything different, just that it runs on a different Windowing and I/O system. This also provides better Wayland support
 
 ## License
-This template is available under the MIT license. Feel free to learn from it and incorporate it in your own projects.
+
+This project is licensed under the [MIT license](LICENSE).
